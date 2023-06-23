@@ -1,26 +1,48 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
-import 'package:flutter/src/widgets/placeholder.dart';
 import 'package:flutter_application_3/models/weather_model.dart';
 import 'package:intl/intl.dart';
 
-class MainPage extends StatelessWidget {
+class MainPage extends StatefulWidget {
   const MainPage({super.key});
+
+  @override
+  State<MainPage> createState() => _MainPageState();
+}
+
+WeatherModel data = WeatherModel();
+
+class _MainPageState extends State<MainPage> {
+  Future<void> getWeather(String city) async {
+    final Dio dio = Dio();
+
+    final response = await dio.get(
+      'https://api.openweathermap.org/data/2.5/weather',
+      queryParameters: {
+        'q': city,
+        'appid': '99e8a0fe0e835bd24d899cd8d3a93d2e',
+        'units': 'metric'
+      },
+    );
+    final result = WeatherModel.fromJson(response.data);
+    data = result;
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    getWeather('Bishkek');
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     DateTime currentDate = DateTime.now();
     final formatter = DateFormat('MMMM dd, yyyy');
     final formattedDate = formatter.format(currentDate);
-    List<WeatherModel> data = [
-      WeatherModel(day: 'Mondat', image: 'assets/sun1.png', temp: '10'),
-      WeatherModel(day: 'Mondat', image: 'assets/sun1.png', temp: '10'),
-      WeatherModel(day: 'Mondat', image: 'assets/sun1.png', temp: '10'),
-      WeatherModel(day: 'Mondat', image: 'assets/sun1.png', temp: '10'),
-      WeatherModel(day: 'Mondat', image: 'assets/sun1.png', temp: '10'),
-      WeatherModel(day: 'Mondat', image: 'assets/sun1.png', temp: '10'),
-      WeatherModel(day: 'Mondat', image: 'assets/sun1.png', temp: '10'),
-    ];
+
     return Scaffold(
       body: Container(
         height: double.infinity,
@@ -36,24 +58,27 @@ class MainPage extends StatelessWidget {
           padding: const EdgeInsets.all(25.0),
           child: Column(
             children: [
-              const Text(
-                'San Francisco',
-                style: TextStyle(
+              Text(
+                data.name ?? '',
+                style: const TextStyle(
                     fontWeight: FontWeight.w400,
                     fontSize: 36,
                     color: Colors.white),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Clear',
-                style: TextStyle(
+              Text(
+                data.weather?.first.description ?? '',
+                style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w400,
                     color: Colors.white),
               ),
               const SizedBox(height: 33),
-              Image.asset(
-                'assets/sun1.png',
+              CachedNetworkImage(
+                imageUrl:
+                    'https://openweathermap.org/img/wn/${data.weather?.first.icon}@2x.png',
+                placeholder: (context, url) => CircularProgressIndicator(),
+                errorWidget: (context, url, error) => Icon(Icons.error),
                 height: 100,
               ),
               const SizedBox(height: 12),
@@ -65,15 +90,18 @@ class MainPage extends StatelessWidget {
                     color: Colors.white),
               ),
               const SizedBox(height: 30),
-              Expanded(
-                child: ListView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: data.length,
-                  itemBuilder: (context, index) => WeatherWidget(
-                    model: data[index],
-                  ),
-                ),
+              TextField(
+                decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    hintText: 'City'),
+                onChanged: (val) {
+                  getWeather(val);
+                },
               ),
+              const SizedBox(height: 30),
+              WeatherWidget(model: data)
             ],
           ),
         ),
@@ -86,7 +114,6 @@ class MainPage extends StatelessWidget {
       Color(0xff223076),
       Color(0xff06050E),
     ];
-    print(currentHour);
 
     if (currentHour >= 19 && currentHour < 23) {
       colors = [];
@@ -105,7 +132,7 @@ class MainPage extends StatelessWidget {
 class WeatherWidget extends StatelessWidget {
   const WeatherWidget({super.key, required this.model});
 
-  final WeatherModel model;
+  final WeatherModel? model;
 
   @override
   Widget build(BuildContext context) {
@@ -115,19 +142,21 @@ class WeatherWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            model.day,
+            model?.name ?? '',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w400,
               color: Colors.white,
             ),
           ),
-          Image.asset(
-            model.image,
-            width: 25,
+          CachedNetworkImage(
+            imageUrl:
+                'https://openweathermap.org/img/wn/${model?.weather?.first.icon}@2x.png',
+            placeholder: (context, url) => CircularProgressIndicator(),
+            errorWidget: (context, url, error) => Icon(Icons.error),
           ),
           Text(
-            model.temp,
+            model?.main?.temp.toString() ?? '',
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w400,
